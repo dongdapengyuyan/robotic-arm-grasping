@@ -1,5 +1,5 @@
 """
-可视化模型预测结果
+Visualize model prediction results
 """
 
 import matplotlib.pyplot as plt
@@ -12,6 +12,7 @@ sns.set_style("whitegrid")
 
 
 def _init_data():
+    """Generate sample training history data"""
     e = list(range(1, 31))
     tl, vl = [0.780], [0.650]
     for i in range(1, 30):
@@ -160,14 +161,11 @@ def plot_5_learning_rate(history, save_path):
 
 
 def plot_6_prediction_visualization(save_path):
-    """
-    生成预测可视化示例图
-    """
+    """Generate prediction visualization sample figure"""
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     fig.suptitle('Figure 6: Prediction Visualization Samples',
                  fontsize=16, weight='bold', y=0.98)
 
-    # 为每个子图创建示例
     samples = [
         {'obj': 'Bottle', 'x': 0.45, 'y': 0.55, 'angle': 15, 'color': '#3498db'},
         {'obj': 'Box', 'x': 0.60, 'y': 0.48, 'angle': -30, 'color': '#e74c3c'},
@@ -178,63 +176,49 @@ def plot_6_prediction_visualization(save_path):
     ]
 
     for idx, (ax, sample) in enumerate(zip(axes.flat, samples)):
-        # 创建模拟的图像背景
         img_size = 224
         img = np.ones((img_size, img_size, 3)) * 0.9
 
-        # 添加一些随机噪声使其看起来更真实
         noise = np.random.randn(img_size, img_size, 3) * 0.05
         img = np.clip(img + noise, 0, 1)
 
-        # 在中心区域绘制一个简单的物体轮廓
         center_x, center_y = int(sample['x'] * img_size), int(sample['y'] * img_size)
         obj_size = 40
 
-        # 创建物体区域（稍暗的矩形）
         y1, y2 = max(0, center_y - obj_size//2), min(img_size, center_y + obj_size//2)
         x1, x2 = max(0, center_x - obj_size//2), min(img_size, center_x + obj_size//2)
         img[y1:y2, x1:x2] *= 0.6
 
-        # 显示图像
         ax.imshow(img)
 
-        # 绘制预测的抓取点和方向
         gripper_length = 50
         gripper_width = 30
         angle_rad = np.deg2rad(sample['angle'])
 
-        # 计算抓取器的端点
         dx = gripper_length * np.cos(angle_rad) / 2
         dy = gripper_length * np.sin(angle_rad) / 2
 
-        # 绘制抓取器中心线
         ax.plot([center_x - dx, center_x + dx],
                [center_y - dy, center_y + dy],
                color=sample['color'], linewidth=3, label='Grasp axis')
 
-        # 绘制抓取器的两个爪子（垂直于中心线）
         perp_dx = gripper_width * np.sin(angle_rad) / 2
         perp_dy = gripper_width * np.cos(angle_rad) / 2
 
-        # 左爪
         ax.plot([center_x - dx - perp_dx, center_x - dx + perp_dx],
                [center_y - dy + perp_dy, center_y - dy - perp_dy],
                color=sample['color'], linewidth=3)
 
-        # 右爪
         ax.plot([center_x + dx - perp_dx, center_x + dx + perp_dx],
                [center_y + dy + perp_dy, center_y + dy - perp_dy],
                color=sample['color'], linewidth=3)
 
-        # 绘制抓取中心点
         ax.plot(center_x, center_y, 'o', color=sample['color'],
                markersize=8, markeredgecolor='white', markeredgewidth=2)
 
-        # 添加标题和预测信息
         ax.set_title(f"Sample {idx+1}: {sample['obj']}",
                     fontsize=11, weight='bold', pad=10)
 
-        # 添加预测值文本
         pred_text = f"Pred: x={sample['x']:.2f}, y={sample['y']:.2f}\n"
         pred_text += f"angle={sample['angle']:.1f}°"
         ax.text(5, 215, pred_text,
@@ -242,7 +226,7 @@ def plot_6_prediction_visualization(save_path):
                fontsize=9, verticalalignment='bottom', family='monospace')
 
         ax.set_xlim(0, img_size)
-        ax.set_ylim(img_size, 0)  # 反转y轴
+        ax.set_ylim(img_size, 0)
         ax.axis('off')
 
     plt.tight_layout()
@@ -348,14 +332,30 @@ def plot_8_final_performance(history, save_path):
 
 
 if __name__ == '__main__':
+    import json
+    from pathlib import Path
+
     print("\n" + "=" * 70)
     print("🎨 Generating Training Visualizations (30 Epochs)")
     print("=" * 70 + "\n")
-    history = _init_data()
+
+    history_file = Path('checkpoints/training_history.json')
+
+    if history_file.exists():
+        print("📂 Loading training history from: checkpoints/training_history.json")
+        with open(history_file, 'r') as f:
+            history = json.load(f)
+        print("✅ Loaded real training data\n")
+    else:
+        print("⚠️  Training history not found, using sample data")
+        print("💡 Run 'python train_models.py' first to generate real data\n")
+        history = _init_data()
+
     save_dir = 'visualize_results_plots'
     import os
 
     os.makedirs(save_dir, exist_ok=True)
+
     print("📊 Final Performance Metrics (Epoch 30):")
     print("-" * 70)
     print(f"   Training Loss:        {history['train_loss'][-1]:.4f}")
@@ -367,7 +367,9 @@ if __name__ == '__main__':
     print(f"   Train Success Rate:   {history['train_success_rate'][-1]:.1f}%")
     print(f"   Val Success Rate:     {history['val_success_rate'][-1]:.1f}%")
     print("-" * 70 + "\n")
+
     print(f"🎯 Generating individual plots in '{save_dir}/'...\n")
+
     plot_1_loss_curves(history, f'{save_dir}/1_loss_curves.png')
     plot_2_position_error(history, f'{save_dir}/2_position_error.png')
     plot_3_angle_error(history, f'{save_dir}/3_angle_error.png')
@@ -376,6 +378,7 @@ if __name__ == '__main__':
     plot_6_prediction_visualization(f'{save_dir}/6_prediction_visualization.png')
     plot_7_metrics_comparison(history, f'{save_dir}/7_metrics_comparison.png')
     plot_8_final_performance(history, f'{save_dir}/8_final_performance.png')
+
     print("\n" + "=" * 70)
     print("✨ All 8 visualizations generated successfully!")
     print(f"📁 Check the '{save_dir}/' folder for individual plots")

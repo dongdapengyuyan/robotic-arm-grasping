@@ -1,5 +1,5 @@
 """
-修复后的Cornell数据集加载器
+Fixed Cornell dataset loader
 """
 import os
 import glob
@@ -11,7 +11,7 @@ import torchvision.transforms as transforms
 
 
 class CornellGraspDataset(Dataset):
-    """Cornell抓取数据集 - 修复版"""
+    """Cornell grasp dataset - fixed version"""
 
     def __init__(self, root_dir, split='train', train_ratio=0.7, val_ratio=0.15):
         self.root_dir = root_dir
@@ -23,10 +23,10 @@ class CornellGraspDataset(Dataset):
                                  std=[0.229, 0.224, 0.225])
         ])
 
-        # 查找所有图片和标注
+        # Find all images and annotations
         self.samples = self._load_dataset()
 
-        # 划分数据集
+        # Split dataset
         total_samples = len(self.samples)
         np.random.seed(42)
         indices = np.random.permutation(total_samples)
@@ -44,22 +44,22 @@ class CornellGraspDataset(Dataset):
         print(f"  {split.capitalize()}: {len(self.indices)} samples")
 
     def _load_dataset(self):
-        """加载所有图片和对应的抓取标注"""
+        """Load all images and corresponding grasp annotations"""
         samples = []
 
-        # 查找所有RGB图片
+        # Find all RGB images
         rgb_files = glob.glob(os.path.join(self.root_dir, "**", "pcd*r.png"),
                               recursive=True)
 
         print(f"  Found {len(rgb_files)} RGB images")
 
         for rgb_path in rgb_files:
-            # 构建对应的标注文件路径
+            # Construct corresponding annotation file path
             base_name = os.path.basename(rgb_path).replace('r.png', '')
             grasp_path = rgb_path.replace('r.png', 'cpos.txt')
 
             if os.path.exists(grasp_path):
-                # 解析抓取框
+                # Parse grasp rectangles
                 grasps = self._parse_grasp_file(grasp_path)
                 if len(grasps) > 0:
                     samples.append({
@@ -72,19 +72,19 @@ class CornellGraspDataset(Dataset):
 
     def _parse_grasp_file(self, filepath):
         """
-        解析Cornell抓取标注文件
-        每个文件包含多个抓取框，每个框由4个点定义
+        Parse Cornell grasp annotation file
+        Each file contains multiple grasp rectangles, each defined by 4 points
         """
         grasps = []
 
         with open(filepath, 'r') as f:
             lines = f.readlines()
 
-        # 每4行定义一个抓取框
+        # Every 4 lines define a grasp rectangle
         for i in range(0, len(lines), 4):
             if i + 3 < len(lines):
                 try:
-                    # 解析4个点的坐标
+                    # Parse coordinates of 4 points
                     points = []
                     for j in range(4):
                         coords = list(map(float, lines[i + j].strip().split()))
@@ -92,7 +92,7 @@ class CornellGraspDataset(Dataset):
                             points.append(coords)
 
                     if len(points) == 4:
-                        # 计算抓取中心和角度
+                        # Calculate grasp center and angle
                         center, angle, width, height = self._compute_grasp_params(points)
 
                         grasps.append({
@@ -109,22 +109,22 @@ class CornellGraspDataset(Dataset):
 
     def _compute_grasp_params(self, points):
         """
-        从4个点计算抓取参数
+        Calculate grasp parameters from 4 points
         points: [[x1,y1], [x2,y2], [x3,y3], [x4,y4]]
 
-        返回: center, angle, width, height
+        Returns: center, angle, width, height
         """
         points = np.array(points)
 
-        # 计算中心点
+        # Calculate center point
         center = points.mean(axis=0)
 
-        # 计算主轴方向（连接对角点）
-        # 假设点的顺序是逆时针或顺时针
-        edge1 = points[1] - points[0]  # 第一条边
-        edge2 = points[2] - points[1]  # 第二条边
+        # Calculate principal axis direction (connecting diagonal points)
+        # Assume points are in counterclockwise or clockwise order
+        edge1 = points[1] - points[0]  # First edge
+        edge2 = points[2] - points[1]  # Second edge
 
-        # 选择较长的边作为抓取方向
+        # Choose the longer edge as grasp direction
         len1 = np.linalg.norm(edge1)
         len2 = np.linalg.norm(edge2)
 
@@ -137,11 +137,11 @@ class CornellGraspDataset(Dataset):
             width = len2
             height = len1
 
-        # 计算角度 (弧度转角度)
+        # Calculate angle (radians to degrees)
         angle = np.arctan2(grasp_direction[1], grasp_direction[0])
         angle = np.degrees(angle)
 
-        # 归一化角度到 [0, 180]
+        # Normalize angle to [0, 180]
         angle = angle % 180
 
         return center, angle, width, height
@@ -153,21 +153,21 @@ class CornellGraspDataset(Dataset):
         actual_idx = self.indices[idx]
         sample = self.samples[actual_idx]
 
-        # 加载图片
+        # Load image
         image = Image.open(sample['image_path']).convert('RGB')
         orig_width, orig_height = image.size
 
-        # 随机选择一个抓取框
+        # Randomly select a grasp rectangle
         grasp = np.random.choice(sample['grasps'])
 
-        # 归一化坐标到 [0, 1]
+        # Normalize coordinates to [0, 1]
         center_x = grasp['center'][0] / orig_width
         center_y = grasp['center'][1] / orig_height
 
-        # 归一化角度到 [0, 1]
+        # Normalize angle to [0, 1]
         angle_normalized = grasp['angle'] / 180.0
 
-        # 应用图像变换
+        # Apply image transform
         if self.transform:
             image = self.transform(image)
 
@@ -180,7 +180,7 @@ class CornellGraspDataset(Dataset):
 
 
 def get_cornell_dataloaders(root_dir, batch_size=32, num_workers=0):
-    """创建Cornell数据集的DataLoader"""
+    """Create DataLoaders for Cornell dataset"""
 
     print(f"📂 Loading Cornell dataset from: {root_dir}")
 
@@ -215,7 +215,7 @@ def get_cornell_dataloaders(root_dir, batch_size=32, num_workers=0):
     return train_loader, val_loader, test_loader
 
 
-# 测试代码
+# Test code
 if __name__ == '__main__':
     root_dir = r"D:\2025fighting\69_CSCI323_MSK\robotic-arm-grasping\cornell_dataset\datasets\oneoneliu\cornell-grasp\versions\1\01"
 
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         batch_size=4
     )
 
-    # 测试一个batch
+    # Test one batch
     print("\n" + "=" * 60)
     print("Testing first batch")
     print("=" * 60)

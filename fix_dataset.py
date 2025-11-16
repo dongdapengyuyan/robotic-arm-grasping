@@ -1,17 +1,15 @@
-"""
-检查Cornell数据集的标注文件
-"""
+
 import os
 import glob
 
 dataset_dir = r"D:\2025fighting\69_CSCI323_MSK\robotic-arm-grasping\cornell_dataset\datasets\oneoneliu\cornell-grasp\versions\1\01"
 
-# 找到所有标注文件
+# Find all annotation files
 grasp_files = glob.glob(os.path.join(dataset_dir, "**", "*cpos.txt"), recursive=True)
 
 print(f"Found {len(grasp_files)} grasp annotation files\n")
 
-# 检查前5个文件的内容
+# Check the content of the first 5 files
 for i, filepath in enumerate(grasp_files[:5]):
     print(f"{'=' * 60}")
     print(f"File {i + 1}: {os.path.basename(filepath)}")
@@ -22,7 +20,7 @@ for i, filepath in enumerate(grasp_files[:5]):
         print(content)
     print()
 
-# 统计坐标范围
+# Calculate coordinate ranges
 print(f"\n{'=' * 60}")
 print("Analyzing coordinate ranges...")
 print(f"{'=' * 60}")
